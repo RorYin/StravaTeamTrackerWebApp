@@ -1,0 +1,135 @@
+{% extends "base.html" %}
+{% block title %}Admin · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Admin Dashboard</h1>
+  <p>Fetch Strava data, compute scores, manage users, and tune challenge rules.</p>
+  <div class="cta-row">
+    <a class="btn btn-primary" href="{{ url_for('admin_fetch') }}">Fetch activities</a>
+    <a class="btn btn-ghost" href="{{ url_for('admin_activities') }}">Edit activities Excel</a>
+    <a class="btn btn-ghost" href="{{ url_for('admin_config') }}">Config</a>
+    <a class="btn btn-ghost" href="{{ url_for('admin_users') }}">Users</a>
+    <a class="btn btn-ghost" href="{{ url_for('admin_queries') }}">Queries ({{ open_query_count }})</a>
+  </div>
+</section>
+
+{% if last_compute and last_compute.message %}
+<div class="flash {{ last_compute.level or 'success' }}" style="margin-bottom: 16px;">
+  <strong>Last compute</strong>
+  {% if last_compute.at %} · {{ last_compute.at }}{% endif %}
+  {% if last_compute.action %} · {{ last_compute.action }}{% endif %}
+  {% if last_compute.data_mode %} · {{ last_compute.data_mode }}{% endif %}
+  <div>{{ last_compute.message }}</div>
+</div>
+{% endif %}
+
+<div class="grid grid-3">
+  <div class="card">
+    <p class="muted">Users</p>
+    <div class="stat">{{ user_count }}</div>
+  </div>
+  <div class="card">
+    <p class="muted">Fetch completed</p>
+    <div class="stat">{{ progress.summary.completed }}/{{ progress.summary.total }}</div>
+  </div>
+  <div class="card">
+    <p class="muted">Open queries</p>
+    <div class="stat">{{ open_query_count }}</div>
+  </div>
+</div>
+
+<section style="margin-top: 24px;">
+  <div class="card">
+    <h3>Compute actions</h3>
+    <p class="muted">
+      SuperStepper always uses the configured day rule
+      (currently {{ settings.superstepper.required_days }} days /
+      {{ settings.superstepper.min_km_per_day }} km).
+    </p>
+
+    <form method="post" action="{{ url_for('admin_compute') }}" class="stack" style="margin-top: 14px;">
+      <div class="mode-box">
+        <label class="mode-option">
+          <input type="radio" name="data_mode" value="recompute" checked />
+          <span>
+            <strong>Recompute from current Excel</strong>
+            <small>Keep activity rows (good after weekly append fetches). Overwrites score JSON/Excel with fresh totals.</small>
+          </span>
+        </label>
+        <label class="mode-option">
+          <input type="radio" name="data_mode" value="clear_then_compute" />
+          <span>
+            <strong>Clear old scores, then compute</strong>
+            <small>Deletes previous team scores / leaders / SuperSteppers / points first, then recalculates from the current activities Excel.</small>
+          </span>
+        </label>
+      </div>
+
+      <div class="admin-actions">
+        <button class="btn btn-primary btn-sm" type="submit" name="action" value="all">Compute all</button>
+        <button class="btn btn-ghost btn-sm" type="submit" name="action" value="team_scores">Team scores</button>
+        <button class="btn btn-ghost btn-sm" type="submit" name="action" value="leaders">Individual leaders</button>
+        <button class="btn btn-ghost btn-sm" type="submit" name="action" value="supersteppers">SuperSteppers</button>
+        <button class="btn btn-ghost btn-sm" type="submit" name="action" value="tokens">Refresh tokens</button>
+      </div>
+    </form>
+
+    <div class="admin-actions" style="margin-top: 14px;">
+      <form method="post" action="{{ url_for('admin_compute') }}">
+        <button class="btn btn-ghost btn-sm" type="submit" name="action" value="clear_scores"
+          onclick="return confirm('Clear all score outputs but keep the activities Excel?');">
+          Clear scores only
+        </button>
+      </form>
+      <form method="post" action="{{ url_for('admin_compute') }}">
+        <input type="hidden" name="clear_backups" value="" />
+        <button class="btn btn-danger btn-sm" type="submit" name="action" value="clear_all_data"
+          onclick="return confirm('Delete activities Excel AND all scores? This cannot be undone.');">
+          Clear all activity + scores
+        </button>
+      </form>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin_activities') }}">View / edit activities</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin_download', kind='activities') }}">Download activities.xlsx</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin_download', kind='points') }}">Download points.xlsx</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('team_scores') }}">View public scores</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('supersteppers_page') }}">View SuperSteppers</a>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('leaders') }}">View leaders</a>
+    </div>
+  </div>
+</section>
+
+{% if scores %}
+<section style="margin-top: 20px;">
+  <div class="card">
+    <h3>Current team scores</h3>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th>Team</th><th>Points</th></tr></thead>
+        <tbody>
+          {% for code, pts in scores.items() %}
+          {% set meta = team_meta.get(code, {}) %}
+          <tr>
+            <td>
+              <div class="team-identity">
+                {% if meta.logo %}
+                  <div class="team-identity-logo" style="width:48px;height:48px;padding:4px;">
+                    <img src="{{ url_for('static', filename=meta.logo) }}" alt="{{ code }}" />
+                  </div>
+                {% else %}
+                  <span class="dot" style="background: {{ meta.color or '#94a3b8' }}"></span>
+                {% endif %}
+                <div class="team-identity-text">
+                  <strong>{{ meta.name or code }}</strong>
+                </div>
+              </div>
+            </td>
+            <td>{{ pts }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

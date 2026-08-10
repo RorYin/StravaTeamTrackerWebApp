@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}SuperStepper · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>SuperStepper</h1>
+  <p>
+    Complete ≥ <strong>{{ rules.min_km_per_day }} km</strong> on
+    {% if rules.require_exact_days %}exactly{% else %}at least{% endif %}
+    <strong>{{ rules.required_days }}</strong> challenge days to earn SuperStepper status.
+  </p>
+</section>
+
+<div class="card" style="margin-bottom: 20px;">
+  <div class="stat">{{ data.supersteppers|length if data.supersteppers else 0 }}</div>
+  <p class="muted">
+    SuperSteppers
+    {% if data.date_calculated %} · last calculated {{ data.date_calculated }}{% endif %}
+  </p>
+</div>
+
+{% if data.supersteppers %}
+<div class="card">
+  <h3>Qualified athletes</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>#</th><th>Name</th><th>Team</th></tr></thead>
+      <tbody>
+        {% for name in data.supersteppers %}
+        <tr>
+          <td>{{ loop.index }}</td>
+          <td>{{ name|athlete_name }}</td>
+          <td>
+            {% set code = name|athlete_team %}
+            {% if code %}
+              {% set meta = team_meta.get(code, {}) %}
+              <span class="team-identity" style="width:auto;">
+                {% if meta.logo %}
+                  <div class="team-identity-logo" style="width:48px;height:48px;padding:4px;">
+                    <img src="{{ url_for('static', filename=meta.logo) }}" alt="{{ code }}" />
+                  </div>
+                {% else %}
+                  <span class="dot" style="background: {{ meta.color or '#94a3b8' }}"></span>
+                {% endif %}
+                <span class="team-identity-text">
+                  <strong style="font-size:0.95rem;">{{ code }}</strong>
+                </span>
+              </span>
+            {% else %}
+              —
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="card"><p class="muted">No SuperSteppers calculated yet.</p></div>
+{% endif %}
+
+{% if data.details %}
+<section style="margin-top: 22px;">
+  <div class="card">
+    <h3>Progress snapshot</h3>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Athlete</th>
+            <th>Team</th>
+            <th>Days logged</th>
+            <th>Qualifying days</th>
+            <th>Total km</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for d in data.details|sort(attribute='qualifying_days', reverse=True) %}
+          <tr>
+            <td>{{ d.name|athlete_name }}</td>
+            <td>
+              {% set code = d.name|athlete_team or d.team %}
+              {% if code %}
+                {% set meta = team_meta.get(code, {}) %}
+                <span class="team-identity" style="width:auto;">
+                  {% if meta.logo %}
+                    <div class="team-identity-logo" style="width:48px;height:48px;padding:4px;">
+                      <img src="{{ url_for('static', filename=meta.logo) }}" alt="{{ code }}" />
+                    </div>
+                  {% else %}
+                    <span class="dot" style="background: {{ meta.color or '#94a3b8' }}"></span>
+                  {% endif %}
+                  <span class="team-identity-text">
+                    <strong style="font-size:0.95rem;">{{ code }}</strong>
+                  </span>
+                </span>
+              {% else %}
+                —
+              {% endif %}
+            </td>
+            <td>{{ d.days_logged }}</td>
+            <td>{{ d.qualifying_days }}</td>
+            <td>{{ d.total_km }}</td>
+            <td>
+              {% if d.is_superstepper %}
+                <span class="badge ok">Qualified</span>
+              {% else %}
+                <span class="badge fail">Not qualified</span>
+              {% endif %}
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endblock %}

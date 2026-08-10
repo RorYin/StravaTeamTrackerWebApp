@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}{{ app_name }} · Home{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>{{ app_name }}</h1>
+  <p>
+    Connect Strava, join your team, and track walking kilometers through the challenge window
+    <strong>{{ challenge_dates }}</strong>. Team scores count the top
+    {{ settings.scoring.top_athletes_per_team }} athletes, capped at
+    {{ settings.scoring.max_km_per_day }} km/user/day.
+  </p>
+  <div class="cta-row">
+    <a class="btn btn-primary" href="{{ url_for('auth') }}">Authorize with Strava</a>
+    <a class="btn btn-ghost" href="{{ url_for('team_scores') }}">Team Scores</a>
+    <a class="btn btn-ghost" href="{{ url_for('supersteppers_page') }}">SuperStepper</a>
+  </div>
+</section>
+
+<section class="grid grid-3">
+  <div class="card">
+    <p class="muted">Authorized athletes</p>
+    <div class="stat">{{ user_count }}</div>
+  </div>
+  <div class="card">
+    <p class="muted">SuperSteppers</p>
+    <div class="stat">{{ superstepper_count }}</div>
+  </div>
+  <div class="card">
+    <p class="muted">Teams</p>
+    <div class="stat">{{ teams|length }}</div>
+  </div>
+</section>
+
+<section style="margin-top: 28px;">
+  <div class="section-title">
+    <h2>Explore</h2>
+  </div>
+  <div class="grid grid-3">
+    <a class="card tile-link" href="{{ url_for('team_scores') }}">
+      <h3>Team Scores</h3>
+      <p class="muted">Live standings from the latest compute run.</p>
+      {% if scores %}
+        <p style="margin-top:14px;">Leader: <strong>{{ scores.keys()|list|first }}</strong></p>
+      {% else %}
+        <p class="muted" style="margin-top:14px;">Scores not calculated yet.</p>
+      {% endif %}
+    </a>
+    <a class="card tile-link" href="{{ url_for('supersteppers_page') }}">
+      <h3>SuperStepper</h3>
+      <p class="muted">Walk ≥ {{ settings.superstepper.min_km_per_day }} km for {{ settings.superstepper.required_days }} days.</p>
+    </a>
+    <a class="card tile-link" href="{{ url_for('query_page') }}">
+      <h3>Send a Query</h3>
+      <p class="muted">Need profile changes after 2 authorizations? Contact admin here.</p>
+    </a>
+  </div>
+</section>
+
+<section style="margin-top: 28px;">
+  <div class="section-title">
+    <h2>Team Member Count</h2>
+  </div>
+  <div class="grid grid-2">
+    {% for code, count in team_counts.items() %}
+      {% set meta = team_meta.get(code) %}
+      <a class="card tile-link" href="{{ url_for('teams_page', team=code) }}">
+        <div class="team-identity">
+          {% if meta and meta.logo %}
+            <div class="team-identity-logo">
+              <img src="{{ url_for('static', filename=meta.logo) }}" alt="{{ code }}" />
+            </div>
+          {% else %}
+            <span class="dot" style="background: {{ meta.color if meta else '#94a3b8' }}"></span>
+          {% endif %}
+          <div class="team-identity-text">
+            <strong>{{ meta.name if meta else code }}</strong>
+            <small>{{ code }}</small>
+          </div>
+        </div>
+        <div class="stat" style="margin-top: 10px;">{{ count }}</div>
+        <p class="muted">authorized members</p>
+      </a>
+    {% else %}
+      <div class="card"><p class="muted">No team members yet.</p></div>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

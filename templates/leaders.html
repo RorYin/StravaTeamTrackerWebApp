@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% block title %}Leaders · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Individual Leaders</h1>
+  <p>Top 10 male and female athletes by total distance (capped per day for ranking).</p>
+</section>
+
+{% macro team_badge(name) %}
+  {% set code = name|athlete_team %}
+  {% if code %}
+    {% set meta = team_meta.get(code, {}) %}
+    <span class="team-badge" title="{{ meta.name or code }}">
+      {% if meta.logo %}
+        <img src="{{ url_for('static', filename=meta.logo) }}" alt="" />
+      {% else %}
+        <span class="dot" style="background: {{ meta.color or '#94a3b8' }}"></span>
+      {% endif %}
+      <span>{{ code }}</span>
+    </span>
+  {% else %}
+    <span class="muted">—</span>
+  {% endif %}
+{% endmacro %}
+
+<div class="grid grid-2">
+  <div class="card">
+    <h3>Top Male</h3>
+    <div class="table-wrap table-wrap-fit">
+      <table class="table-compact">
+        <thead>
+          <tr>
+            <th class="col-rank">#</th>
+            <th>Athlete</th>
+            <th class="col-team">Team</th>
+            <th class="col-pts">Points</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in male %}
+          <tr>
+            <td class="col-rank">{{ loop.index }}</td>
+            <td class="col-name" title="{{ a['Athlete Name']|athlete_name }}">{{ a['Athlete Name']|athlete_name }}</td>
+            <td class="col-team">{{ team_badge(a['Athlete Name']) }}</td>
+            <td class="col-pts">{{ a['Total points'] }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="muted">Not calculated yet</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <h3>Top Female</h3>
+    <div class="table-wrap table-wrap-fit">
+      <table class="table-compact">
+        <thead>
+          <tr>
+            <th class="col-rank">#</th>
+            <th>Athlete</th>
+            <th class="col-team">Team</th>
+            <th class="col-pts">Points</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for a in female %}
+          <tr>
+            <td class="col-rank">{{ loop.index }}</td>
+            <td class="col-name" title="{{ a['Athlete Name']|athlete_name }}">{{ a['Athlete Name']|athlete_name }}</td>
+            <td class="col-team">{{ team_badge(a['Athlete Name']) }}</td>
+            <td class="col-pts">{{ a['Total points'] }}</td>
+          </tr>
+          {% else %}
+          <tr><td colspan="4" class="muted">Not calculated yet</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+{% endblock %}

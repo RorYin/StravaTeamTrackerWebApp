@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <title>{% block title %}{{ app_name }}{% endblock %}</title>
+  <link rel="icon" type="image/png" href="{{ url_for('static', filename=app_logo) }}" />
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}" />
+</head>
+<body>
+  <div class="bg-orb one"></div>
+  <div class="bg-orb two"></div>
+  <div class="bg-orb three"></div>
+
+  <div class="shell">
+    <nav class="nav" id="site-nav">
+      <a class="brand" href="{{ url_for('index') }}">
+        <img class="brand-logo" src="{{ url_for('static', filename=app_logo) }}" alt="{{ app_name }}" />
+        <span>{{ app_name }}{% if event_year %} {{ event_year }}{% endif %}</span>
+      </a>
+      <button
+        class="nav-toggle"
+        type="button"
+        aria-label="Toggle navigation"
+        aria-expanded="false"
+        aria-controls="site-nav-links"
+        id="nav-toggle"
+      >
+        <span class="nav-toggle-bars" aria-hidden="true"></span>
+      </button>
+      <div class="nav-links" id="site-nav-links">
+        <a href="{{ url_for('index') }}" class="{% if request.endpoint == 'index' %}active{% endif %}">Home</a>
+        <a href="{{ url_for('auth') }}">Authorize</a>
+        <a href="{{ url_for('team_scores') }}" class="{% if request.endpoint == 'team_scores' %}active{% endif %}">Team Scores</a>
+        <a href="{{ url_for('supersteppers_page') }}" class="{% if request.endpoint == 'supersteppers_page' %}active{% endif %}">SuperStepper</a>
+        <a href="{{ url_for('leaders') }}" class="{% if request.endpoint == 'leaders' %}active{% endif %}">Leaders</a>
+        <a href="{{ url_for('query_page') }}" class="{% if request.endpoint == 'query_page' %}active{% endif %}">Query</a>
+        {% if is_admin %}
+          <a href="{{ url_for('admin_dashboard') }}">Admin</a>
+          <a href="{{ url_for('admin_logout') }}">Logout</a>
+        {% else %}
+          <a href="{{ url_for('admin_login') }}">Admin</a>
+        {% endif %}
+      </div>
+    </nav>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-wrap">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+
+    <div class="footer">
+      <img class="footer-logo" src="{{ url_for('static', filename=app_logo) }}" alt="" />
+      <span>Developed with ❤️ by RorYin</span>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var nav = document.getElementById("site-nav");
+      var toggle = document.getElementById("nav-toggle");
+      if (!nav || !toggle) return;
+      toggle.addEventListener("click", function () {
+        var open = nav.classList.toggle("is-open");
+        toggle.setAttribute("aria-expanded", open ? "true" : "false");
+      });
+      nav.querySelectorAll(".nav-links a").forEach(function (link) {
+        link.addEventListener("click", function () {
+          nav.classList.remove("is-open");
+          toggle.setAttribute("aria-expanded", "false");
+        });
+      });
+    })();
+  </script>
+</body>
+</html>

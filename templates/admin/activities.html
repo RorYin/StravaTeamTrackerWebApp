@@ -1,0 +1,171 @@
+{% extends "base.html" %}
+{% block title %}Activities Excel · Admin{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Combined Activities</h1>
+  <p>
+    View and edit <code>combined_athlete_activities.xlsx</code>.
+    Use this when Strava stores a Sunday walk under Monday (shift date back one day), or to correct distance / names.
+  </p>
+  <div class="cta-row">
+    <a class="btn btn-ghost" href="{{ url_for('admin_dashboard') }}">← Dashboard</a>
+    <a class="btn btn-ghost" href="{{ url_for('admin_download', kind='activities') }}">Download Excel</a>
+    <a class="btn btn-ghost" href="{{ url_for('admin_fetch') }}">Fetch activities</a>
+  </div>
+</section>
+
+{% if not file_exists and total_rows == 0 %}
+<div class="card">
+  <p class="muted">No activities workbook yet. Run a fetch first, then come back to edit rows.</p>
+</div>
+{% else %}
+
+<div class="card" style="margin-bottom: 16px;">
+  <form method="get" class="filter-bar">
+    <label>
+      Search name / ID
+      <input type="text" name="q" value="{{ q }}" placeholder="e.g. Dhanush or 12379" />
+    </label>
+    <label>
+      Date from
+      <input type="date" name="date_from" value="{{ date_from }}" />
+    </label>
+    <label>
+      Date to
+      <input type="date" name="date_to" value="{{ date_to }}" />
+    </label>
+    <div class="filter-actions">
+      <button class="btn btn-primary btn-sm" type="submit">Filter</button>
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin_activities') }}">Clear</a>
+    </div>
+  </form>
+  <p class="muted" style="margin-top: 10px;">
+    Showing {{ rows|length }} of {{ filtered_count }} filtered row(s)
+    ({{ total_rows }} total in Excel) · page {{ page }} / {{ total_pages }}
+  </p>
+</div>
+
+<form method="post" id="activities-form">
+  <input type="hidden" name="q" value="{{ q }}" />
+  <input type="hidden" name="date_from" value="{{ date_from }}" />
+  <input type="hidden" name="date_to" value="{{ date_to }}" />
+  <input type="hidden" name="page" value="{{ page }}" />
+
+  <div class="card">
+    <div class="admin-actions" style="margin-bottom: 12px;">
+      <button class="btn btn-primary btn-sm" type="submit" name="action" value="save">Save edits on this page</button>
+      <button class="btn btn-ghost btn-sm" type="submit" name="action" value="shift_minus_one"
+        onclick="return confirm('Shift selected dates back 1 day? (Monday → Sunday)');">
+        Selected: date −1 day
+      </button>
+      <button class="btn btn-ghost btn-sm" type="submit" name="action" value="shift_plus_one"
+        onclick="return confirm('Shift selected dates forward 1 day?');">
+        Selected: date +1 day
+      </button>
+      <button class="btn btn-danger btn-sm" type="submit" name="action" value="delete"
+        onclick="return confirm('Delete selected rows from the Excel file?');">
+        Delete selected
+      </button>
+    </div>
+
+    <div class="table-wrap">
+      <table class="edit-table">
+        <thead>
+          <tr>
+            <th style="width:36px;"><input type="checkbox" id="select-all" title="Select all on page" /></th>
+            <th>Athlete Name</th>
+            <th style="width:110px;">Athlete ID</th>
+            <th style="width:140px;">Date</th>
+            <th style="width:100px;">Distance (km)</th>
+            <th>Activities</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for r in rows %}
+          <tr>
+            <td>
+              <input type="checkbox" name="selected" value="{{ r.row_id }}" class="row-check" />
+              <input type="hidden" name="row_id" value="{{ r.row_id }}" />
+            </td>
+            <td>
+              <input type="text" name="row_{{ r.row_id }}_name" value="{{ r.name }}" />
+            </td>
+            <td>
+              <input type="text" name="row_{{ r.row_id }}_athlete_id" value="{{ r.athlete_id }}" />
+            </td>
+            <td>
+              <input type="date" name="row_{{ r.row_id }}_date" value="{{ r.date }}" />
+            </td>
+            <td>
+              <input type="number" step="0.001" min="0" name="row_{{ r.row_id }}_distance" value="{{ r.distance }}" />
+            </td>
+            <td>
+              <input type="text" name="row_{{ r.row_id }}_activities" value="{{ r.activities }}" title="{{ r.activities }}" />
+            </td>
+          </tr>
+          {% else %}
+          <tr><td colspan="6" class="muted">No rows match this filter.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    {% if total_pages > 1 %}
+    <div class="admin-actions" style="margin-top: 14px;">
+      {% if page > 1 %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin_activities', q=q, date_from=date_from, date_to=date_to, page=page-1) }}">← Prev</a>
+      {% endif %}
+      {% if page < total_pages %}
+      <a class="btn btn-ghost btn-sm" href="{{ url_for('admin_activities', q=q, date_from=date_from, date_to=date_to, page=page+1) }}">Next →</a>
+      {% endif %}
+    </div>
+    {% endif %}
+  </div>
+</form>
+
+<div class="card" style="margin-top: 16px;">
+  <h3>Add row</h3>
+  <p class="muted">Manually insert a day total if needed.</p>
+  <form method="post" class="filter-bar" style="margin-top: 10px;">
+    <input type="hidden" name="action" value="add_row" />
+    <input type="hidden" name="q" value="{{ q }}" />
+    <input type="hidden" name="date_from" value="{{ date_from }}" />
+    <input type="hidden" name="date_to" value="{{ date_to }}" />
+    <label>
+      Athlete Name
+      <input type="text" name="new_name" placeholder="Name_TEAM" required />
+    </label>
+    <label>
+      Athlete ID
+      <input type="text" name="new_athlete_id" />
+    </label>
+    <label>
+      Date
+      <input type="date" name="new_date" required />
+    </label>
+    <label>
+      Distance (km)
+      <input type="number" step="0.001" min="0" name="new_distance" value="0" />
+    </label>
+    <label>
+      Activities note
+      <input type="text" name="new_activities" />
+    </label>
+    <div class="filter-actions">
+      <button class="btn btn-primary btn-sm" type="submit">Add row</button>
+    </div>
+  </form>
+</div>
+
+<script>
+  const selectAll = document.getElementById('select-all');
+  if (selectAll) {
+    selectAll.addEventListener('change', () => {
+      document.querySelectorAll('.row-check').forEach((el) => {
+        el.checked = selectAll.checked;
+      });
+    });
+  }
+</script>
+{% endif %}
+{% endblock %}

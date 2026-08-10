@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Admin Login · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="hero" style="max-width: 520px; margin-left: auto; margin-right: auto;">
+  <h1>Admin</h1>
+  <p>Password-protected control panel for fetching, scoring, and configuration.</p>
+</section>
+
+<div class="card" style="max-width: 480px; margin: 0 auto;">
+  <form class="stack" method="post">
+    <label>Password
+      <input type="password" name="password" required autofocus placeholder="Enter admin password" />
+    </label>
+    <button class="btn btn-primary" type="submit">Sign in</button>
+  </form>
+</div>
+{% endblock %}

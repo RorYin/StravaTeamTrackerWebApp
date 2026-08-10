@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}Queries · Admin{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>User Queries</h1>
+  <p>Inbox stored in <code>data/queries.json</code>.</p>
+  <div class="cta-row">
+    <a class="btn btn-ghost" href="{{ url_for('admin_dashboard') }}">← Dashboard</a>
+  </div>
+</section>
+
+<div class="grid">
+  {% for q in queries %}
+  <div class="card">
+    <div style="display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap;">
+      <div>
+        <h3 style="margin:0;">{{ q.name }}</h3>
+        <p class="muted" style="margin:6px 0 0;">
+          {{ q.created_at }}
+          {% if q.email %} · {{ q.email }}{% endif %}
+          {% if q.athlete_id %} · ID {{ q.athlete_id }}{% endif %}
+        </p>
+      </div>
+      <span class="badge {{ 'ok' if q.status == 'resolved' else 'pending' }}">{{ q.status }}</span>
+    </div>
+    <p style="margin: 14px 0;">{{ q.message }}</p>
+    <form method="post" class="admin-actions">
+      <input type="hidden" name="id" value="{{ q.id }}" />
+      {% if q.status != 'resolved' %}
+      <button class="btn btn-primary btn-sm" name="action" value="resolve">Mark resolved</button>
+      {% else %}
+      <button class="btn btn-ghost btn-sm" name="action" value="reopen">Reopen</button>
+      {% endif %}
+      <button class="btn btn-danger btn-sm" name="action" value="delete" onclick="return confirm('Delete this query?');">Delete</button>
+    </form>
+  </div>
+  {% else %}
+  <div class="card"><p class="muted">No queries yet.</p></div>
+  {% endfor %}
+</div>
+{% endblock %}

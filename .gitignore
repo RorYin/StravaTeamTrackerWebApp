@@ -1,0 +1,29 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.env
+.env.*
+!.env.example
+
+# Local secrets / runtime config (never commit real credentials)
+config/settings.json
+
+# Runtime-only folders (seed JSON/XLSX in data/ ARE tracked empty)
+data/backups/
+data/temp/
+static/uploads/teams/*
+!static/uploads/teams/.gitkeep
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+*.log
+
+# Local helpers
+migrate_legacy_data.py
+_test_*.py

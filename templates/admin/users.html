@@ -1,0 +1,63 @@
+{% extends "base.html" %}
+{% block title %}Users · Admin{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Authorized Users</h1>
+  <p>Assign teams, remove local records, or fully deauthorize from Strava.</p>
+  <div class="cta-row">
+    <a class="btn btn-ghost" href="{{ url_for('admin_dashboard') }}">← Dashboard</a>
+  </div>
+</section>
+
+<div class="card">
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Name</th>
+          <th>Team</th>
+          <th>ID</th>
+          <th>Gender</th>
+          <th>Assign</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td>{{ u.name|athlete_name }}</td>
+          <td><span class="badge">{{ u.team or u.name|athlete_team or '—' }}</span></td>
+          <td>{{ u.athlete_id }}</td>
+          <td>{{ u.gender or '—' }}</td>
+          <td>
+            <form method="post" style="display:flex; gap:8px; align-items:center;">
+              <input type="hidden" name="athlete_id" value="{{ u.athlete_id }}" />
+              <input type="hidden" name="action" value="set_team" />
+              <select name="team" style="min-width:90px;">
+                <option value="">—</option>
+                {% for t in teams %}
+                <option value="{{ t }}" {% if u.team == t %}selected{% endif %}>{{ t }}</option>
+                {% endfor %}
+              </select>
+              <button class="btn btn-ghost btn-sm" type="submit">Save</button>
+            </form>
+          </td>
+          <td>
+            <form method="post" style="display:inline;" onsubmit="return confirm('Remove locally?');">
+              <input type="hidden" name="athlete_id" value="{{ u.athlete_id }}" />
+              <button class="btn btn-ghost btn-sm" name="action" value="remove">Remove</button>
+            </form>
+            <form method="post" style="display:inline;" onsubmit="return confirm('Deauthorize on Strava and remove?');">
+              <input type="hidden" name="athlete_id" value="{{ u.athlete_id }}" />
+              <button class="btn btn-danger btn-sm" name="action" value="deauth">Deauth</button>
+            </form>
+          </td>
+        </tr>
+        {% else %}
+        <tr><td colspan="6" class="muted">No authorized users yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

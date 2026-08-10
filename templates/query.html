@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}Query · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Send a Query</h1>
+  <p>Questions about authorization, team assignment, or scoring go to the admin inbox (stored in JSON).</p>
+</section>
+
+<div class="card" style="max-width: 720px;">
+  <form class="stack" method="post">
+    <div class="form-row">
+      <label>Name
+        <input name="name" required placeholder="Your full name" />
+      </label>
+      <label>Email (optional)
+        <input name="email" type="email" placeholder="you@company.com" />
+      </label>
+    </div>
+    <label>Athlete ID (optional)
+      <input name="athlete_id" placeholder="Strava athlete id" />
+    </label>
+    <label>Message
+      <textarea name="message" rows="5" required placeholder="How can we help?"></textarea>
+    </label>
+    <button class="btn btn-primary" type="submit">Submit query</button>
+  </form>
+</div>
+{% endblock %}

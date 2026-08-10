@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+{% block title %}Config · Admin{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Challenge Config</h1>
+  <p>All scoring rules live in <code>config/settings.json</code> and can be edited here.</p>
+  <div class="cta-row">
+    <a class="btn btn-ghost" href="{{ url_for('admin_dashboard') }}">← Dashboard</a>
+  </div>
+</section>
+
+<form class="stack" method="post" enctype="multipart/form-data">
+  <div class="card">
+    <h3>General</h3>
+    <div class="form-row" style="margin-top:12px;">
+      <label>App name
+        <input name="app_name" value="{{ cfg.app_name }}" />
+      </label>
+      <label>Event year
+        <input name="event_year" type="number" value="{{ cfg.event_year }}" />
+      </label>
+    </div>
+    <div class="form-row">
+      <label>Start date
+        <input name="start_date" type="date" value="{{ cfg.start_date }}" />
+      </label>
+      <label>End date
+        <input name="end_date" type="date" value="{{ cfg.end_date }}" />
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Scoring</h3>
+    <div class="form-row" style="margin-top:12px;">
+      <label>Max km counted / user / day (for team scores)
+        <input name="max_km_per_day" type="number" step="0.1" value="{{ cfg.scoring.max_km_per_day }}" />
+      </label>
+      <label>Top athletes per team
+        <input name="top_athletes_per_team" type="number" value="{{ cfg.scoring.top_athletes_per_team }}" />
+      </label>
+    </div>
+    <div class="form-row">
+      <label>Min pace (min/km) to count activity
+        <input name="min_pace_min_per_km" type="number" step="0.1" value="{{ cfg.scoring.min_pace_min_per_km }}" />
+      </label>
+      <label>Individual ranking max km / day
+        <input name="individual_max_km_per_day" type="number" step="0.1" value="{{ cfg.scoring.individual_max_km_per_day }}" />
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>SuperStepper</h3>
+    <div class="form-row" style="margin-top:12px;">
+      <label>Min km / day
+        <input name="ss_min_km" type="number" step="0.1" value="{{ cfg.superstepper.min_km_per_day }}" />
+      </label>
+      <label>Required days
+        <input name="ss_required_days" type="number" value="{{ cfg.superstepper.required_days }}" />
+      </label>
+    </div>
+    <label style="margin-top:8px;">
+      <span style="display:flex; gap:10px; align-items:center; color: var(--text);">
+        <input type="checkbox" name="ss_exact" {% if cfg.superstepper.require_exact_days %}checked{% endif %} style="width:auto;" />
+        Require exact day count (legacy behavior)
+      </span>
+    </label>
+  </div>
+
+  <div class="card">
+    <h3>Teams &amp; logos</h3>
+    <p class="muted">Leave code blank to remove a slot. Logos show on scores, teams, and home.</p>
+    {% for t in team_slots %}
+    <div class="team-config-slot">
+      <div class="form-row" style="margin-top:10px;">
+        <label>Code
+          <input name="team_code_{{ loop.index0 }}" value="{{ t.code }}" maxlength="8" />
+        </label>
+        <label>Name
+          <input name="team_name_{{ loop.index0 }}" value="{{ t.name }}" />
+        </label>
+      </div>
+      <div class="form-row">
+        <label>Color
+          <input name="team_color_{{ loop.index0 }}" type="color" value="{{ t.color or '#64748b' }}" style="height: 44px; padding: 4px;" />
+        </label>
+        <label>Logo upload
+          <input name="team_logo_{{ loop.index0 }}" type="file" accept="image/png,image/jpeg,image/webp,image/gif,image/svg+xml" />
+        </label>
+      </div>
+      {% if t.logo %}
+      <div class="logo-preview-row">
+        <img class="team-logo" src="{{ url_for('static', filename=t.logo) }}" alt="{{ t.code }} logo" />
+        <label style="display:flex; gap:8px; align-items:center; color: var(--text);">
+          <input type="checkbox" name="team_logo_clear_{{ loop.index0 }}" style="width:auto;" />
+          Remove current logo
+        </label>
+      </div>
+      {% endif %}
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="card">
+    <h3>Strava API</h3>
+    <p class="muted">Uses <code>GET /api/v3/athlete/activities</code> (current official endpoint). App must be Active in Strava settings.</p>
+    <div class="form-row" style="margin-top:12px;">
+      <label>Client ID
+        <input name="client_id" value="{{ cfg.strava.client_id }}" />
+      </label>
+      <label>Client secret
+        <input name="client_secret" value="{{ cfg.strava.client_secret }}" />
+      </label>
+    </div>
+    <label>Redirect URI
+      <input name="redirect_uri" value="{{ cfg.strava.redirect_uri }}" />
+    </label>
+  </div>
+
+  <div class="card">
+    <h3>Admin password</h3>
+    <label>New password (leave blank to keep current)
+      <input name="admin_password" type="password" placeholder="••••••••" />
+    </label>
+  </div>
+
+  <button class="btn btn-primary" type="submit">Save configuration</button>
+</form>
+{% endblock %}

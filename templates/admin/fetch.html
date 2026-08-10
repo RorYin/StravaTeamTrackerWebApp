@@ -1,0 +1,389 @@
+{% extends "base.html" %}
+{% block title %}Fetch · Admin{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Fetch Activities</h1>
+  <p>
+    Pull activities for authorized athletes between the challenge dates, store per-athlete JSON backups,
+    and merge daily totals into Excel.
+  </p>
+  <div class="cta-row">
+    <a class="btn btn-ghost" href="{{ url_for('admin_dashboard') }}">← Dashboard</a>
+    <a class="btn btn-ghost" href="{{ url_for('admin_activities') }}">Edit activities Excel</a>
+  </div>
+</section>
+
+<div class="grid grid-3" style="margin-bottom: 18px;">
+  <div class="card">
+    <p class="muted">Pending</p>
+    <div class="stat" id="stat-pending">{{ progress_data.summary.pending }}</div>
+  </div>
+  <div class="card">
+    <p class="muted">Completed</p>
+    <div class="stat" id="stat-completed">{{ progress_data.summary.completed }}</div>
+  </div>
+  <div class="card">
+    <p class="muted">Failed</p>
+    <div class="stat" id="stat-failed">{{ progress_data.summary.failed }}</div>
+  </div>
+</div>
+
+<div class="card" style="margin-bottom: 18px;">
+  <h3>Fetch all users</h3>
+  <p class="muted">
+    Choose how new Strava data should land in Excel, then run a sequential one-by-one fetch.
+    After fetch finishes, use Admin → Compute to refresh scores.
+  </p>
+
+  <div class="mode-box" style="margin-top: 12px;">
+    <label class="mode-option">
+      <input type="radio" name="live-data-mode" value="append" checked />
+      <span>
+        <strong>Append (weekly / partial)</strong>
+        <small>Keep existing Excel rows. Same athlete+date is updated. Best for week-by-week pulls.</small>
+      </span>
+    </label>
+    <label class="mode-option">
+      <input type="radio" name="live-data-mode" value="replace" />
+      <span>
+        <strong>Clear &amp; replace (full challenge window)</strong>
+        <small>Deletes current activities Excel + all score JSON/Excel first, then fetches everyone fresh. Use for full {{ settings.superstepper.required_days }}-day runs.</small>
+      </span>
+    </label>
+    <label class="mode-option">
+      <input type="checkbox" id="live-clear-backups" />
+      <span>
+        <strong>Also clear JSON backups</strong>
+        <small>Only applies with Clear &amp; replace.</small>
+      </span>
+    </label>
+  </div>
+
+  <div class="form-row" style="margin-top: 12px;">
+    <label>Start date
+      <input type="date" id="live-start" value="{{ start_date }}" />
+    </label>
+    <label>End date
+      <input type="date" id="live-end" value="{{ end_date }}" />
+    </label>
+  </div>
+  <div class="admin-actions" style="margin-top: 14px;">
+    <button class="btn btn-primary" type="button" id="btn-fetch-all">Fetch all pending (one by one)</button>
+    <button class="btn btn-ghost" type="button" id="btn-fetch-all-refetch">Reset &amp; re-fetch everyone</button>
+    <button class="btn btn-danger" type="button" id="btn-fetch-stop" disabled>Stop</button>
+    <button class="btn btn-ghost" type="button" id="btn-console-clear">Clear console</button>
+  </div>
+  <div id="live-status" class="muted" style="margin-top: 14px;">Idle — {{ progress_data.summary.total }} users loaded</div>
+  <div class="score-bar" style="margin-top: 10px;">
+    <span id="live-bar" style="width: {{ ((progress_data.summary.completed + progress_data.summary.failed) / progress_data.summary.total * 100) if progress_data.summary.total else 0 }}%;"></span>
+  </div>
+
+  <div class="console" id="fetch-console" aria-live="polite">
+    <div class="console-line muted">Ready. Pick Append or Clear &amp; replace, then start fetch.</div>
+  </div>
+</div>
+
+<div class="grid grid-2">
+  <div class="card">
+    <h3>Manual controls</h3>
+    <form class="stack" method="post" style="margin-top:12px;">
+      <div class="mode-box">
+        <label class="mode-option">
+          <input type="radio" name="data_mode" value="append" checked />
+          <span><strong>Append</strong><small>Keep Excel rows</small></span>
+        </label>
+        <label class="mode-option">
+          <input type="radio" name="data_mode" value="replace" />
+          <span><strong>Clear &amp; replace</strong><small>Wipe Excel + scores first</small></span>
+        </label>
+      </div>
+      <div class="form-row">
+        <label>Start date
+          <input type="date" name="start_date" value="{{ start_date }}" />
+        </label>
+        <label>End date
+          <input type="date" name="end_date" value="{{ end_date }}" />
+        </label>
+      </div>
+      <div class="admin-actions">
+        <button class="btn btn-ghost" name="action" value="one">Fetch next pending</button>
+        <button class="btn btn-ghost" name="action" value="all">Fetch all pending (server batch)</button>
+        <button class="btn btn-danger" name="action" value="reset" onclick="return confirm('Reset all fetch progress to pending?');">Reset progress</button>
+      </div>
+    </form>
+
+    <form class="stack" method="post" style="margin-top:18px;">
+      <label>Fetch one athlete
+        <select name="athlete_id" required>
+          <option value="">Select athlete…</option>
+          {% for u in users %}
+          <option value="{{ u.athlete_id }}">{{ u.name|athlete_name }}{% if u.name|athlete_team %} · {{ u.name|athlete_team }}{% endif %} ({{ u.athlete_id }})</option>
+          {% endfor %}
+        </select>
+      </label>
+      <input type="hidden" name="start_date" value="{{ start_date }}" />
+      <input type="hidden" name="end_date" value="{{ end_date }}" />
+      <button class="btn btn-ghost" name="action" value="athlete">Fetch selected</button>
+    </form>
+
+    <p class="muted" style="margin-top:14px;">
+      Combined Excel:
+      {% if has_xlsx %}<span class="badge ok">present</span>{% else %}<span class="badge pending">not created yet</span>{% endif %}
+      · Users: {{ users|length }}
+    </p>
+  </div>
+
+  <div class="card">
+    <h3>Progress</h3>
+    <div class="progress-list" id="progress-list" style="margin-top:12px;">
+      {% for p in progress_data.progress %}
+      <div class="progress-item" data-id="{{ p.athlete_id }}">
+        <div>
+          <div>{{ p.athlete_name|athlete_name }}{% if p.athlete_name|athlete_team %} <span class="badge">{{ p.athlete_name|athlete_team }}</span>{% endif %}</div>
+          {% if p.error %}<div class="error-inline">{{ p.error }}</div>{% endif %}
+        </div>
+        <span class="badge {{ 'ok' if p.status == 'completed' else ('fail' if p.status == 'failed' else 'pending') }}">
+          {{ p.status }}
+        </span>
+      </div>
+      {% else %}
+      <p class="muted">No users to fetch.</p>
+      {% endfor %}
+    </div>
+  </div>
+</div>
+
+<script>
+(() => {
+  const API_PREPARE = {{ url_for('admin_fetch_prepare')|tojson }};
+  const API_NEXT = {{ url_for('admin_fetch_next')|tojson }};
+
+  const statusEl = document.getElementById("live-status");
+  const barEl = document.getElementById("live-bar");
+  const listEl = document.getElementById("progress-list");
+  const consoleEl = document.getElementById("fetch-console");
+  const btnAll = document.getElementById("btn-fetch-all");
+  const btnRefetch = document.getElementById("btn-fetch-all-refetch");
+  const btnStop = document.getElementById("btn-fetch-stop");
+  const btnClear = document.getElementById("btn-console-clear");
+  const startEl = document.getElementById("live-start");
+  const endEl = document.getElementById("live-end");
+
+  let stopRequested = false;
+  let running = false;
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  function splitLabel(raw) {
+    const text = String(raw || "");
+    const idx = text.lastIndexOf("_");
+    if (idx === -1) return { name: text, team: "" };
+    const team = text.slice(idx + 1);
+    if (/^[A-Z0-9]{2,8}$/.test(team)) {
+      return { name: text.slice(0, idx), team };
+    }
+    return { name: text, team: "" };
+  }
+
+  function badgeClass(status) {
+    if (status === "completed") return "ok";
+    if (status === "failed") return "fail";
+    return "pending";
+  }
+
+  function stamp() {
+    return new Date().toLocaleTimeString();
+  }
+
+  function logLine(message, level) {
+    const line = document.createElement("div");
+    line.className = "console-line " + (level || "");
+    line.innerHTML = `<span class="console-time">[${stamp()}]</span> ${escapeHtml(message)}`;
+    consoleEl.appendChild(line);
+    consoleEl.scrollTop = consoleEl.scrollHeight;
+  }
+
+  function updateStats(summary) {
+    if (!summary) return;
+    document.getElementById("stat-pending").textContent = summary.pending || 0;
+    document.getElementById("stat-completed").textContent = summary.completed || 0;
+    document.getElementById("stat-failed").textContent = summary.failed || 0;
+    const done = (summary.completed || 0) + (summary.failed || 0);
+    const total = summary.total || 0;
+    barEl.style.width = (total ? Math.round((done / total) * 100) : 0) + "%";
+  }
+
+  function renderProgress(progress) {
+    if (!progress || !progress.length) {
+      listEl.innerHTML = '<p class="muted">No users to fetch.</p>';
+      return;
+    }
+    listEl.innerHTML = progress.map((p) => {
+      const parts = splitLabel(p.athlete_name);
+      const err = p.error ? `<div class="error-inline">${escapeHtml(p.error)}</div>` : "";
+      const team = parts.team ? ` <span class="badge">${escapeHtml(parts.team)}</span>` : "";
+      return `
+        <div class="progress-item" data-id="${escapeHtml(p.athlete_id)}">
+          <div>
+            <div>${escapeHtml(parts.name)}${team}</div>
+            ${err}
+          </div>
+          <span class="badge ${badgeClass(p.status)}">${escapeHtml(p.status)}</span>
+        </div>`;
+    }).join("");
+  }
+
+  async function postJson(url, body) {
+    const res = await fetch(url, {
+      method: "POST",
+      credentials: "same-origin",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "X-Requested-With": "XMLHttpRequest",
+      },
+      body: JSON.stringify(body || {}),
+    });
+
+    const text = await res.text();
+    let data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch (_) {
+      throw new Error(`Non-JSON response (${res.status}). Admin session may have expired.`);
+    }
+
+    if (res.status === 401) {
+      throw new Error(data.message || "Admin session expired. Refresh and log in again.");
+    }
+    if (!res.ok) {
+      throw new Error((data && (data.message || data.error)) || `Request failed (${res.status})`);
+    }
+    return data;
+  }
+
+  function setRunning(isRunning) {
+    running = isRunning;
+    btnAll.disabled = isRunning;
+    btnRefetch.disabled = isRunning;
+    btnStop.disabled = !isRunning;
+  }
+
+  async function runFetchAll(refetchCompleted) {
+    if (running) return;
+    stopRequested = false;
+    setRunning(true);
+
+    const modeInput = document.querySelector('input[name="live-data-mode"]:checked');
+    const dataMode = modeInput ? modeInput.value : "append";
+    const clearBackups = document.getElementById("live-clear-backups").checked;
+
+    if (dataMode === "replace") {
+      const ok = confirm(
+        "Clear & replace will DELETE the current activities Excel and all score files, then re-fetch everyone. Continue?"
+      );
+      if (!ok) {
+        setRunning(false);
+        return;
+      }
+    }
+
+    try {
+      logLine(
+        `Preparing (${dataMode}${clearBackups && dataMode === "replace" ? ", clear backups" : ""})…`,
+        "info"
+      );
+      statusEl.textContent = "Preparing…";
+
+      const prepared = await postJson(API_PREPARE, {
+        refetch_completed: !!refetchCompleted || dataMode === "replace",
+        data_mode: dataMode,
+        clear_backups: clearBackups,
+      });
+      updateStats(prepared.summary);
+      renderProgress(prepared.progress);
+
+      if (prepared.cleared) {
+        logLine(
+          `Cleared old data before fetch. activities_removed=${!!prepared.cleared.removed_activities}`,
+          "warn"
+        );
+      }
+      logLine(`Queue ready — pending ${prepared.summary.pending}/${prepared.summary.total} · mode=${prepared.data_mode || dataMode}`, "info");
+
+      const pendingCount = (prepared.summary && prepared.summary.pending) || 0;
+      if (!pendingCount) {
+        const msg = "Nothing to fetch. Use Reset & re-fetch everyone to pull from Strava again.";
+        statusEl.textContent = msg;
+        logLine(msg, "warn");
+        return;
+      }
+
+      const payload = { start_date: startEl.value, end_date: endEl.value };
+      let guard = 0;
+      const maxLoops = pendingCount + 5;
+
+      while (!stopRequested && guard < maxLoops) {
+        guard += 1;
+        statusEl.textContent = `Fetching next athlete (${guard}/${pendingCount})…`;
+        const result = await postJson(API_NEXT, payload);
+        updateStats(result.summary);
+        renderProgress(result.progress);
+
+        const label = splitLabel(result.athlete || "").name || "athlete";
+        if (result.ok) {
+          logLine(`OK  ${label} — ${result.activity_count || 0} activities — ${result.message}`, "ok");
+        } else if (String(result.message || "").includes("No pending")) {
+          logLine("All pending users processed.", "info");
+          statusEl.textContent = "All pending users processed.";
+          break;
+        } else {
+          logLine(`FAIL ${label} — ${result.error || result.message}`, "error");
+        }
+
+        statusEl.textContent = result.message || "Fetched one athlete.";
+        if (result.done) break;
+      }
+
+      if (stopRequested) {
+        statusEl.textContent = "Stopped. Resume with Fetch all pending.";
+        logLine("Stopped by admin.", "warn");
+      } else {
+        logLine(
+          `Finished. completed=${document.getElementById("stat-completed").textContent} failed=${document.getElementById("stat-failed").textContent}`,
+          "info"
+        );
+      }
+    } catch (err) {
+      console.error(err);
+      statusEl.textContent = "Error: " + err.message;
+      logLine("ERROR " + err.message, "error");
+    } finally {
+      setRunning(false);
+    }
+  }
+
+  btnAll.addEventListener("click", () => runFetchAll(false));
+  btnRefetch.addEventListener("click", () => {
+    if (confirm("Reset completed users and fetch everyone again from Strava?")) {
+      runFetchAll(true);
+    }
+  });
+  btnStop.addEventListener("click", () => {
+    stopRequested = true;
+    statusEl.textContent = "Stopping after current athlete…";
+    logLine("Stop requested…", "warn");
+  });
+  btnClear.addEventListener("click", () => {
+    consoleEl.innerHTML = '<div class="console-line muted">Console cleared.</div>';
+  });
+})();
+</script>
+{% endblock %}

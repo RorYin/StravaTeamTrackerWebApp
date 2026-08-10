@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+{% block title %}Team Scores · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="hero">
+  <h1>Team Scores</h1>
+  <p>
+    Each team's score is the sum of its top {{ top_n }} athletes.
+    Daily distance is capped at {{ settings.scoring.max_km_per_day }} km per user per day for team points.
+  </p>
+</section>
+
+{% if scores %}
+<section class="grid grid-2">
+  {% for code, points in scores.items() %}
+    {% set meta = team_meta.get(code, {}) %}
+    <div class="card">
+      <div class="team-identity">
+        {% if meta.logo %}
+          <div class="team-identity-logo">
+            <img src="{{ url_for('static', filename=meta.logo) }}" alt="{{ code }}" />
+          </div>
+        {% else %}
+          <span class="dot" style="background: {{ meta.get('color', '#94a3b8') }}"></span>
+        {% endif %}
+        <div class="team-identity-text">
+          <strong>{{ meta.get('name', code) }}</strong>
+          <small>{{ code }}</small>
+        </div>
+      </div>
+      <div class="stat" style="margin-top: 12px;">{{ points }}</div>
+      <p class="muted">team points</p>
+      <div class="score-bar">
+        <span style="width: {{ (points / max_points * 100) if max_points else 0 }}%;"></span>
+      </div>
+    </div>
+  {% endfor %}
+</section>
+
+<section style="margin-top: 28px;">
+  <div class="section-title">
+    <h2>Top {{ top_n }} per team</h2>
+  </div>
+  <div class="grid grid-2">
+    {% for code, athletes in top_per_team.items() %}
+      {% set meta = team_meta.get(code, {}) %}
+      <div class="card">
+        <h3 class="team-heading">
+          {% if meta.logo %}
+            <div class="team-identity-logo">
+              <img src="{{ url_for('static', filename=meta.logo) }}" alt="{{ code }}" />
+            </div>
+          {% endif %}
+          <span>{{ meta.get('name', code) }}</span>
+        </h3>
+        <div class="table-wrap table-wrap-fit">
+          <table class="table-compact">
+            <thead>
+              <tr><th class="col-rank">#</th><th>Athlete</th><th class="col-pts">Points</th></tr>
+            </thead>
+            <tbody>
+              {% for a in athletes %}
+              <tr>
+                <td class="col-rank">{{ loop.index }}</td>
+                <td class="col-name" title="{{ a['Athlete Name']|athlete_name }}">{{ a['Athlete Name']|athlete_name }}</td>
+                <td class="col-pts">{{ a['Total points'] }}</td>
+              </tr>
+              {% else %}
+              <tr><td colspan="3" class="muted">No athletes yet</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+</section>
+{% else %}
+<div class="card">
+  <h3>Scores not ready</h3>
+  <p class="muted">Admin needs to fetch activities and run score calculation.</p>
+</div>
+{% endif %}
+{% endblock %}

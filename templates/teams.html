@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block title %}{% if selected_team %}{{ selected_meta.name if selected_meta else selected_team }} · {% endif %}Teams · {{ app_name }}{% endblock %}
+{% block content %}
+<section class="hero">
+  {% if selected_team and selected_meta %}
+  <h1>{{ selected_meta.name }}</h1>
+  <p>Authorized members for <strong>{{ selected_team }}</strong>.</p>
+  <div class="cta-row">
+    <a class="btn btn-ghost" href="{{ url_for('teams_page') }}">← All teams</a>
+  </div>
+  {% else %}
+  <h1>Teams</h1>
+  <p>Click a team to see its authorized members.</p>
+  {% endif %}
+</section>
+
+{% if not selected_team %}
+<div class="grid grid-2">
+  {% for team in team_list %}
+  <a class="card tile-link" href="{{ url_for('teams_page', team=team.code) }}">
+    <div class="team-identity">
+      {% if team.logo %}
+        <div class="team-identity-logo">
+          <img src="{{ url_for('static', filename=team.logo) }}" alt="{{ team.code }}" />
+        </div>
+      {% else %}
+        <span class="dot" style="background: {{ team.color }}"></span>
+      {% endif %}
+      <div class="team-identity-text">
+        <strong>{{ team.name }}</strong>
+        <small>{{ team.code }}</small>
+      </div>
+    </div>
+    <div class="stat" style="margin-top: 12px;">{{ counts.get(team.code, 0) }}</div>
+    <p class="muted">authorized members</p>
+  </a>
+  {% endfor %}
+</div>
+{% else %}
+<div class="card" style="margin-bottom: 16px;">
+  <div class="team-identity">
+    {% if selected_meta and selected_meta.logo %}
+      <div class="team-identity-logo">
+        <img src="{{ url_for('static', filename=selected_meta.logo) }}" alt="{{ selected_team }}" />
+      </div>
+    {% endif %}
+    <div class="team-identity-text">
+      <strong>{{ selected_meta.name if selected_meta else selected_team }}</strong>
+      <small>{{ members|length }} authorized member{{ '' if members|length == 1 else 's' }}</small>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-wrap table-wrap-fit">
+    <table class="table-compact">
+      <thead>
+        <tr>
+          <th class="col-rank">#</th>
+          <th>Athlete</th>
+          <th class="col-team">Team</th>
+          <th class="col-pts">Gender</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for m in members %}
+        <tr>
+          <td class="col-rank">{{ loop.index }}</td>
+          <td class="col-name" title="{{ m.name|athlete_name }}">{{ m.name|athlete_name }}</td>
+          <td class="col-team"><span class="badge">{{ m.team }}</span></td>
+          <td class="col-pts">{{ m.gender }}</td>
+        </tr>
+        {% else %}
+        <tr><td colspan="4" class="muted">No authorized members for this team yet.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

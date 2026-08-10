@@ -1,0 +1,56 @@
+{
+  "app_name": "StepUp Challenge",
+  "event_year": 2026,
+  "start_date": "2026-09-01",
+  "end_date": "2026-09-30",
+  "teams": [
+    {
+      "code": "GS",
+      "name": "Gear Shifters",
+      "color": "#22c55e",
+      "logo": "images/GS.png"
+    },
+    {
+      "code": "SS",
+      "name": "Software Samurais",
+      "color": "#3b82f6",
+      "logo": "images/SS.png"
+    },
+    {
+      "code": "TT",
+      "name": "Tech Titans",
+      "color": "#f59e0b",
+      "logo": "images/TT.png"
+    },
+    {
+      "code": "AE",
+      "name": "Automotive Eagles",
+      "color": "#ef4444",
+      "logo": "images/AE.png"
+    }
+  ],
+  "scoring": {
+    "max_km_per_day": 15,
+    "top_athletes_per_team": 15,
+    "min_pace_min_per_km": 4.5,
+    "individual_max_km_per_day": 60
+  },
+  "superstepper": {
+    "min_km_per_day": 3,
+    "required_days": 30,
+    "require_exact_days": false
+  },
+  "strava": {
+    "client_id": "YOUR_STRAVA_CLIENT_ID",
+    "client_secret": "YOUR_STRAVA_CLIENT_SECRET",
+    "redirect_uri": "http://localhost:5000/authorized",
+    "authorize_url": "https://www.strava.com/oauth/authorize",
+    "token_url": "https://www.strava.com/oauth/token",
+    "deauthorize_url": "https://www.strava.com/oauth/deauthorize",
+    "activities_url": "https://www.strava.com/api/v3/athlete/activities"
+  },
+  "admin": {
+    "password": "CHANGE_ME"
+  },
+  "pythonanywhere_free_proxy": true
+}
